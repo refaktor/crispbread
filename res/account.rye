@@ -1,0 +1,50 @@
+rye |needs { sqlite } ;crypto
+;    |expects { db }
+
+;  The user accounts resource
+
+account-resource: context {
+
+	produce-token: fn { id } {
+		generate-token 32 :tok
+		exec db
+		{	insert into tokens ( id_user , token ) values ( ?id , ?tok )
+			on conflict ( id_user ) do update set token = ?tok }
+		tok
+	}
+
+	try-login: fn { email password } {
+		query db { select id , password from users where email = ?email }
+		|^check 0
+		|pass { .B1 .bcrypt-check password |^require 0 }
+		|A1
+	}
+	
+	get-token: webfn { email: required email  password: required } { w r } {
+		try-login email password
+		|^check { 401 "wrong credentials" }
+		|produce-token
+	}
+
+	login: webfn { email: required email  password: required } { w r } {
+		try-login email password
+		|^check { 401 "wrong credentials" } :uid
+		get store r sess
+		|set "logined" 1
+		|set "uid" uid
+		|save r w
+	}
+
+	logout: webfn { } { w r } {
+		get store r sess
+		|set "logined" 0
+		|set "uid" 0
+		|save r w
+	}
+
+	get-uid: webfn { } { w r } {
+		get store r sess
+		|get "uid"
+		|fix { 0 }
+	}
+}

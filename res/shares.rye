@@ -1,0 +1,13 @@
+
+share-resource: context {
+ 
+	no-auth: { 401 "Unauthenticated" }
+	forbidden: { 403 "Forbidden" }
+	get-uid: fn { r } { get store r sess |get "uid" |^check 0 |^require 0 }
+
+	get-all-by: webfn { hash: required } { w r } {
+		query db { select w.* from word w join collection c on c.id = w.id_collection where c.hash = ?hash }
+		|^check { 500 }
+	}
+	
+}

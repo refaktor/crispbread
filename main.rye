@@ -1,0 +1,48 @@
+
+rye |needs { sqlite http }
+;    |expects { %.cookie-temp-secret %data/shares.db }
+;    |info { author: "refaktor" }
+
+
+; framework
+do load %core/framework.rye
+
+; setup resources
+handle-api: fn { w r } {
+	handle-web-resources w r context {
+		share: evalu { share-resource "Handles user shares (files, docs)" }
+		account: evalu { account-resource "Handles user accounts" }
+	}
+}
+
+; the main part
+db: open sqlite://data/shares.db
+store: new-cookie-store read %.cookie-temp-secret
+sess: "main-session"
+
+; resources
+do load %res/account.rye
+do load %res/shares.rye
+
+; the server
+new-server ":8080"
+|handle "/api" ?handle-api
+|serve
+
+
+; use there links to test:
+;
+; account:
+; http://localhost:8080/api?_r=account&_m=get-token&email=jim@example.com&password=secret
+; http://localhost:8080/api?_r=account&_m=login&email=jim@example.com&password=secret
+; http://localhost:8080/api?_r=account&_m=get-uid
+; http://localhost:8080/api?_r=account&_m=logout
+;
+; share:
+; http://localhost:8080/api?_r=page&_m=get-one&id=2
+; http://localhost:8080/api?_r=page&_m=set-one&id=10&title=test&content=bla%20bla
+; http://localhost:8080/api?_r=page&_m=add-one&title=test%201&content=bla%20bla%20bla
+; http://localhost:8080/api?_r=page&_m=delete-one&id=2
+; 
+
+
